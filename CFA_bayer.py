@@ -102,9 +102,7 @@ def display_bayer_pattern(im):
     plt.show()
 
 
-
 display_bayer_pattern(rgb_image)
-
 
 
 #Demosaicing function
