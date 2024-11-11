@@ -19,6 +19,11 @@ def save_image(image, filename, directory="images", format="png"):
     if not os.path.exists(directory):
         os.makedirs(directory)
     
+    # Normalize floating-point image values if necessary
+    if image.dtype == np.float32 or image.dtype == np.float64:
+        if image.max() > 1.0:  # If values are in range [0, 255], normalize to [0, 1]
+            image = image / 255.0
+
     # Construct the full path
     full_path = os.path.join(directory, f"{filename}.{format}")
     
@@ -31,3 +36,4 @@ def save_image(image, filename, directory="images", format="png"):
         raise ValueError("Invalid image shape. Expected 2D (grayscale) or 3D (RGB).")
     
     print(f"Image saved at: {full_path}")
+

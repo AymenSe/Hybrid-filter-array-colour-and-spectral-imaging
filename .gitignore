@@ -1,2 +1,7 @@
 database/*.dat
 database/*.hdr
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

@@ -37,7 +37,7 @@ class CFA:
         g[1::2, 0::2] = image[1::2, 0::2, 1]  # Green channel
         b[1::2, 1::2] = image[1::2, 1::2, 2]  # Blue channel
 
-        return r, g, b
+        return (r, g, b)
 
     def display(self, mosaic):
         """
@@ -64,4 +64,4 @@ class CFA:
         plt.axis('off')
         plt.show()
 
-        return r, g, b
+        return stacked_image
