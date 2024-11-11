@@ -3,4 +3,4 @@ class Config:
     output_dir = "output"
     rgb_indices = (29, 19, 9)
     band_indices = (29, )        
-    
+    pattern = "RGGB"

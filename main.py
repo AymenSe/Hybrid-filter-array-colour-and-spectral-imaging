@@ -4,12 +4,16 @@ from demosaicing import *
 from reconstruction import *
 from iqa import *
 from utils import *
+from config import Config
 
+import os
 
 def main(config):
+    # Initialize objects
     processor = HyperspectralImageProcessor(config.hsi_path)
     cfa = CFA(config.pattern)
     demosaicer = Demosaicing(config.pattern)
+    
     # Example usage:
     print("Loading hyperspectral image...")
     metadata = processor.get_metadata()
@@ -28,6 +32,8 @@ def main(config):
     print("Demosaicing RGB image...")
     demosaiced = demosaicer.apply(mosaic)
     demosaicer.display(demosaiced)
+    # save the demosaiced image
+    save_image(demosaiced, filename=f"Demosaiced_{config.pattern}", directory=config.output, format="png")
     
     print("Reconstructing hyperspectral image...")
     reconstructed_hsi = None
@@ -40,6 +46,8 @@ def main(config):
 
 
 if __name__ == '__main__':
-    config = ...
+    config = Config()
+    if not os.path.exists(config.output_dir):
+        os.makedirs(config.output_dir)        
     main(config)
     
