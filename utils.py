@@ -1,13 +1,19 @@
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import Union
 
-def save_image(image, filename, directory="images", format="png"):
+def save_image(
+    image: np.ndarray,
+    filename: str,
+    directory: str = "images",
+    format: str = "png"
+) -> str:
     """
     Saves an image to a specified file.
 
     Parameters:
-    - image (numpy.ndarray): The image array (shape: height x width x channels or grayscale).
+    - image (np.ndarray): The image array (shape: height x width x channels or grayscale).
     - filename (str): The name of the file (without extension).
     - directory (str): The directory where the file will be saved. Default is "images".
     - format (str): The image format (e.g., "png", "jpeg"). Default is "png".
@@ -36,4 +42,4 @@ def save_image(image, filename, directory="images", format="png"):
         raise ValueError("Invalid image shape. Expected 2D (grayscale) or 3D (RGB).")
     
     print(f"Image saved at: {full_path}")
-
+    return full_path

@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Tuple
 
 class CFA:
-    def __init__(self, pattern="RGGB"):
+    def __init__(self, pattern: str = "RGGB") -> None:
         """
         Initializes the CFA class with a specified Bayer pattern.
 
@@ -13,15 +14,17 @@ class CFA:
             raise ValueError("Currently, only 'RGGB' pattern is supported.")
         self.pattern = pattern
 
-    def apply(self, image):
+    def apply(self, image: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Applies the Bayer pattern to the input image to extract red, green, and blue channels.
 
         Parameters:
-        image (numpy.ndarray): A 3-dimensional numpy array representing the input image with shape (height, width, 3).
+        image (np.ndarray): 
+            A 3-dimensional numpy array representing the input image with shape (height, width, 3).
 
         Returns:
-        tuple: A tuple of three 2-dimensional numpy arrays representing the red, green, and blue channels.
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: 
+            A tuple of three 2-dimensional numpy arrays representing the red, green, and blue channels.
         """
         if image.ndim != 3 or image.shape[2] != 3:
             raise ValueError("Input image must have 3 dimensions with shape (height, width, 3).")
@@ -39,15 +42,17 @@ class CFA:
 
         return (r, g, b)
 
-    def display(self, mosaic):
+    def display(self, mosaic: Tuple[np.ndarray, np.ndarray, np.ndarray]) -> np.ndarray:
         """
         Applies the Bayer pattern and displays the result.
 
         Parameters:
-        image (numpy.ndarray): A 3-dimensional numpy array representing the input image with shape (height, width, 3).
+        mosaic (Tuple[np.ndarray, np.ndarray, np.ndarray]): 
+            A tuple of three 2-dimensional numpy arrays representing the red, green, and blue channels.
 
         Returns:
-        None
+        np.ndarray: 
+            A 3-dimensional numpy array representing the stacked image with shape (height, width, 3).
         """
         r, g, b = mosaic
         # Normalize values to [0, 255] for visualization
