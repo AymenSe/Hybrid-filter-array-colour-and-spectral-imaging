@@ -14,7 +14,49 @@ class CFA:
             raise ValueError("Currently, only 'RGGB' pattern is supported.")
         self.pattern = pattern
 
-    def apply(self, image: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def apply(self, image: np.ndarray) -> Tuple[np.ndarray, ...]:
+        """
+        Applies the CFA pattern to the input image to extract channels.
+
+        Parameters:
+        image (np.ndarray): 
+            A 3-dimensional numpy array representing the input image with shape (height, width, 3).
+
+        Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: 
+            A tuple of three 2-dimensional numpy arrays representing the channels.
+        """
+        return rggb_filter_array(image)
+    
+    def display(self, mosaic: Tuple[np.ndarray, ...]) -> np.ndarray:
+        """
+        displays the result.
+
+        Parameters:
+        mosaic (Tuple[np.ndarray, ...]): 
+            A tuple of multiple 2-dimensional numpy arrays representing the channels.
+
+        Returns:
+        np.ndarray: 
+            A N-dimensional numpy array representing the stacked image with shape (height, width, 3).
+        """
+        for i in range(len(mosaic)):
+            mosaic[i] = (mosaic[i] / mosaic[i].max() * 255) if mosaic[i].max() > 0 else mosaic[i]
+
+        
+        # Stacking the channels for visualization
+        stacked_image = np.stack(mosaic, axis=2).astype(np.uint8)
+        
+        # Displaying the Bayer pattern image
+        plt.imshow(stacked_image)
+        plt.title(f"{self.pattern} Pattern ({self.pattern})")
+        plt.axis('off')
+        plt.show()
+
+        return stacked_image
+
+
+def rggb_filter_array(image: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Applies the Bayer pattern to the input image to extract red, green, and blue channels.
 
@@ -41,32 +83,5 @@ class CFA:
         b[1::2, 1::2] = image[1::2, 1::2, 2]  # Blue channel
 
         return (r, g, b)
-
-    def display(self, mosaic: Tuple[np.ndarray, np.ndarray, np.ndarray]) -> np.ndarray:
-        """
-        Applies the Bayer pattern and displays the result.
-
-        Parameters:
-        mosaic (Tuple[np.ndarray, np.ndarray, np.ndarray]): 
-            A tuple of three 2-dimensional numpy arrays representing the red, green, and blue channels.
-
-        Returns:
-        np.ndarray: 
-            A 3-dimensional numpy array representing the stacked image with shape (height, width, 3).
-        """
-        r, g, b = mosaic
-        # Normalize values to [0, 255] for visualization
-        r = (r / r.max() * 255) if r.max() > 0 else r
-        g = (g / g.max() * 255) if g.max() > 0 else g
-        b = (b / b.max() * 255) if b.max() > 0 else b
-        
-        # Stacking the channels for visualization
-        stacked_image = np.stack((r, g, b), axis=2).astype(np.uint8)
-        
-        # Displaying the Bayer pattern image
-        plt.imshow(stacked_image)
-        plt.title(f"Bayer Pattern ({self.pattern})")
-        plt.axis('off')
-        plt.show()
-
-        return stacked_image
+    
+    
