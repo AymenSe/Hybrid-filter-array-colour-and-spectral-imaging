@@ -18,12 +18,15 @@ def main(config):
     # Example usage:
     print("Loading hyperspectral image...")
     metadata = processor.get_metadata()
+    print(metadata)
+    # exit()
     wavelengths = processor.get_wavelengths()
     print("=====================================================")
     
     
     print("Creating RGB image...")
     rgb_image = processor.create_rgb_image(config.rgb_indices)
+    save_image(rgb_image, filename="RGB", directory=config.output_dir, format="png")
     normalized_rgb = processor.normalize_uint8(rgb_image)
     print("=====================================================")
     
@@ -49,7 +52,10 @@ def main(config):
     
     print("Evaluating image quality...")
     ssim = None
-    psnr = None
+    # psnr = peak_signal_noise_ratio(rgb_image, demosaiced)
+    mse = mean_squared_error(rgb_image, demosaiced)
+    # print(f"PSNR: {psnr:.2f} dB")
+    print(f"MSE: {mse:.2f}")
     
     
 
