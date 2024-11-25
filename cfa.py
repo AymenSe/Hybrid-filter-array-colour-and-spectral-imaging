@@ -11,7 +11,7 @@ class CFA:
         Parameters:
         pattern (str): The Bayer pattern to use. Default is "RGGB".
         """
-        possible_patterns = ["RGGB", "RGXB"]
+        possible_patterns = ["RGGB", "RGXB", "GBRG", "GBRX", "GRBG", "GRBX", "BGGR", "BGRX"]
         if pattern not in possible_patterns:
             raise ValueError(f"Currently, {pattern} pattern is not supported.")
         self.pattern = pattern

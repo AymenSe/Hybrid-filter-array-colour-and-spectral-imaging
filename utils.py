@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from typing import Union
 
+
 def save_image(
     image: np.ndarray,
     filename: str,
@@ -43,3 +44,4 @@ def save_image(
     
     print(f"Image saved at: {full_path}")
     return full_path
+
