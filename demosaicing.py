@@ -11,9 +11,9 @@ class Demosaicing:
         Parameters:
         pattern (str): The Bayer pattern. Default is "RGGB".
         """
-        if pattern != "RGGB":
-            raise ValueError("Currently, only 'RGGB' pattern is supported.")
-        self.pattern = pattern
+        possible_patterns = ["RGGB", "RGXB"]
+        if pattern not in possible_patterns:
+            raise ValueError(f"Currently, {pattern} pattern is not supported.")
 
     def bilinear(self, mosaic: Tuple[np.ndarray, np.ndarray, np.ndarray]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """

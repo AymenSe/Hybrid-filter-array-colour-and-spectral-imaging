@@ -8,7 +8,7 @@ from config import Config
 
 import os
 
-def main(config):
+def main(config, save_folder):
     # Initialize objects
     processor = HyperspectralImageProcessor(config.hsi_path)
     cfa = CFA(config.pattern)
@@ -26,7 +26,7 @@ def main(config):
     
     print("Creating RGB image...")
     rgb_image = processor.create_rgb_image(config.rgb_indices)
-    save_image(rgb_image, filename="RGB", directory=config.output_dir, format="png")
+    save_image(rgb_image, filename="RGB", directory=save_folder, format="png")
     normalized_rgb = processor.normalize_uint8(rgb_image)
     print("=====================================================")
     
@@ -34,17 +34,17 @@ def main(config):
     mosaic = cfa.apply(normalized_rgb)
     red, green, blue = mosaic
     rgb = cfa.display(mosaic)
-    save_image(rgb, filename=f"Mosaic_{config.pattern}", directory=config.output_dir, format="png")
-    save_image(red, filename=f"Mosaic_red_{config.pattern}", directory=config.output_dir, format="png")
-    save_image(green, filename=f"Mosaic_green_{config.pattern}", directory=config.output_dir, format="png")
-    save_image(blue, filename=f"Mosaic_blue_{config.pattern}", directory=config.output_dir, format="png")
+    save_image(rgb, filename=f"Mosaic_{config.pattern}", directory=save_folder, format="png")
+    save_image(red, filename=f"Mosaic_red_{config.pattern}", directory=save_folder, format="png")
+    save_image(green, filename=f"Mosaic_green_{config.pattern}", directory=save_folder, format="png")
+    save_image(blue, filename=f"Mosaic_blue_{config.pattern}", directory=save_folder, format="png")
     print("=====================================================")
     
     print("Demosaicing RGB image...")
     demosaiced = demosaicer.apply(mosaic)
     demosaicer.display(demosaiced)
     # save the demosaiced image
-    save_image(demosaiced, filename=f"Demosaiced_{config.pattern}", directory=config.output_dir, format="png")
+    save_image(demosaiced, filename=f"Demosaiced_{config.pattern}", directory=save_folder, format="png")
     print("=====================================================")
     
     print("Reconstructing hyperspectral image...")
@@ -53,9 +53,9 @@ def main(config):
     print("Evaluating image quality...")
     ssim = None
     # psnr = peak_signal_noise_ratio(rgb_image, demosaiced)
-    mse = mean_squared_error(rgb_image, demosaiced)
-    # print(f"PSNR: {psnr:.2f} dB")
-    print(f"MSE: {mse:.2f}")
+    # mse = mean_squared_error(rgb_image, demosaiced)
+    # # print(f"PSNR: {psnr:.2f} dB")
+    # print(f"MSE: {mse:.2f}")
     
     
 
@@ -63,6 +63,9 @@ def main(config):
 if __name__ == '__main__':
     config = Config()
     if not os.path.exists(config.output_dir):
-        os.makedirs(config.output_dir)        
-    main(config)
+        os.makedirs(config.output_dir)
+    save_folder = os.path.join(config.output_dir, config.pattern)
+    if not os.path.exists(save_folder):     
+        os.makedirs(save_folder)
+    main(config, save_folder)
     

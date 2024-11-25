@@ -4,4 +4,4 @@ class Config:
     output_dir: str = "output"
     rgb_indices: Tuple[int, int, int] = (70, 53, 19)
     band_indices: Tuple[int, ...] = (29,)
-    pattern: str = "RGGB"
+    pattern: str = "RGXB"
