@@ -4,5 +4,5 @@ class Config:
     output_dir: str = "output"
     rgb_indices: Tuple[int, int, int] = (70, 53, 19)
     band_indices: Tuple[int, ...] = (29,)
-    pattern: str = "RGXB"
-    demosaic_method = "green_correction_bilinear" # "bilinear" or "green_correction_bilinear"
+    pattern: str = "RGGB"
+    demosaic_method = "bilinear" # "bilinear" or "green_correction_bilinear"

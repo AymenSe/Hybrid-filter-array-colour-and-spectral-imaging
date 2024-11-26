@@ -16,7 +16,8 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 def main(config, save_folder):
     # Initialize objects
     processor = HyperspectralImageProcessor(config.hsi_path)
-    cfa = CFA(config.pattern)
+    # cfa = CFA(config.pattern)
+    cfa = BayerCFA(config.pattern)
     demosaicer = Demosaicing(config)
     qualityEvaluator = QualityMetrics()
     print("=====================================================")
