@@ -131,7 +131,7 @@ class BayerCFA:
     Class for Bayer Color Filter Array (CFA) operations with extended patterns.
     """
 
-    def __init__(self, pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"] = "RGGB"):
+    def __init__(self, pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "GBRX", "GRBX", "BGRX"] = "RGGB"):
         """
         Initialize the BayerCFA class with a given CFA pattern.
 
@@ -140,7 +140,7 @@ class BayerCFA:
         """
         self.pattern = validate_method(
             pattern.upper(),
-            ("RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"),
+            ("RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "GBRX", "GRBX", "BGRX"),
             '"{0}" CFA pattern is invalid, it must be one of {1}!',
         )
 
@@ -179,35 +179,15 @@ class BayerCFA:
         g = G * G_m
         b = B * B_m
         
-        # CFA = R * R_m + G * G_m + B * B_m
         return (r, g, b)
     
     def display(self, mosaic: Tuple[np.ndarray, ...]) -> np.ndarray:
         # Displaying the Bayer pattern image
-        mosaic = np.stack(mosaic, axis=2).astype(np.uint8)
-        plt.imshow(mosaic)
-        plt.title(f"{self.pattern} Pattern ({self.pattern})")
-        plt.axis('off')
-        plt.show()
+        mosaic = mosaic[0] + mosaic[1] + mosaic[2]
+        # plt.imshow(mosaic)
+        # plt.title(f"{self.pattern} Pattern ({self.pattern})")
+        # plt.axis('off')
+        # plt.show()
 
         return mosaic
-
-
-
-if __name__ == "__main__":
-    # Load the image
-    image = np.random.randint(254, 255, (6, 6, 3))
-
-    # Initialize the CFA class
-    cfa = CFA(pattern="RGGB")
-
-    # Apply the Bayer pattern to the image
-    mosaic = cfa.apply(image)
-    
-    # Display the result
-    cfa.display(mosaic)
-    
-    cfax = CFA(pattern="RGXB")
-    mosaicx = cfax.apply(image)
-    cfa.display(mosaicx)
     

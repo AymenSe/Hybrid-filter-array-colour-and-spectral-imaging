@@ -9,54 +9,96 @@ from iqa import QualityMetrics
 import os
 import torch
 import os
+from scipy.signal import convolve2d
+
+import warnings
+warnings.filterwarnings("ignore")
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # from utils import save_image
 
-def main(config, save_folder):
+def main(config):
+    root_hsi = config.hsi_path.split("/")[-1].split(".")[0]
+    root_save_folder = os.path.join(config.output_dir, root_hsi)
+    if not os.path.exists(root_save_folder):     
+        os.makedirs(root_save_folder)
+    
+    for pattern in config.pattern:
+        for demosaic_method in config.demosaic_method:
+            save_folder = os.path.join(root_save_folder, pattern, demosaic_method)
+            print(f"Pattern: {pattern}, Demosaic method: {demosaic_method}")
+            process_image(pattern, demosaic_method, save_folder, config)
+            print("=====================================================")
+       
+       
+def process_image(pattern, demosaic_method, save_folder, config):     
     # Initialize objects
     processor = HyperspectralImageProcessor(config.hsi_path)
     # cfa = CFA(config.pattern)
-    cfa = BayerCFA(config.pattern)
-    demosaicer = Demosaicing(config)
+    cfa = BayerCFA(pattern)
+    # demosaicer = Demosaicing(config)
+    demosaicer = Demosaicing(pattern, demosaic_method)
     qualityEvaluator = QualityMetrics()
     print("=====================================================")
     
     # Example usage:
-    print("Loading hyperspectral image...")
-    metadata = processor.get_metadata()
-    print(metadata)
+    # print("Loading hyperspectral image...")
+    # metadata = processor.get_metadata()
+    # print(metadata)
     # exit()
-    wavelengths = processor.get_wavelengths()
+    # wavelengths = processor.get_wavelengths()
     print("=====================================================")
+    
     
     
     print("Creating RGB image...")
     rgb_image = processor.create_rgb_image(config.rgb_indices)
     save_image(rgb_image, filename="RGB", directory=save_folder, format="png")
     normalized_rgb = processor.normalize_uint8(rgb_image)
-    # print(normalized_rgb[:, :, 1][:8, :8])
     print("=====================================================")
-    
     
     
     print("Applying CFA...")
     mosaic = cfa.apply(normalized_rgb)
     red, green, blue = mosaic
-    rgb = cfa.display(mosaic)
-    save_image(rgb, filename=f"Mosaic_{config.pattern}", directory=save_folder, format="png")
-    save_image(red, filename=f"Mosaic_red_{config.pattern}", directory=save_folder, format="png")
-    save_image(green, filename=f"Mosaic_green_{config.pattern}", directory=save_folder, format="png")
-    save_image(blue, filename=f"Mosaic_blue_{config.pattern}", directory=save_folder, format="png")
+    mosaic = cfa.display(mosaic)
+    save_image(mosaic, filename=f"Mosaic_{pattern}", directory=save_folder, format="png")
+    save_image(red, filename=f"Mosaic_red_{pattern}", directory=save_folder, format="png")
+    save_image(green, filename=f"Mosaic_green_{pattern}", directory=save_folder, format="png")
+    save_image(blue, filename=f"Mosaic_blue_{pattern}", directory=save_folder, format="png")
     print("=====================================================")
     
+    
+    # print(mosaic.shape)
+    
+    
+    # Correcting the green channel
+    if "X" in pattern:
+        prev_green = green.copy()
+        # Green interpolation kernel
+        k_x = 1 / 4 * np.array([
+            [1, 0, 1], 
+            [0, 4, 0], 
+            [1, 0, 1]])
+        green = convolve2d(green, k_x, 'same')
+        green = processor.normalize_uint8(green)
+        
+        new_mosaic = (red, green, blue)
+        mosaic = cfa.display(new_mosaic)    
+        save_image(mosaic, filename=f"Mosaic_{pattern}_corrected", directory=save_folder, format="png")
+        save_image(green, filename=f"Mosaic_green_{pattern}_corrected", directory=save_folder, format="png")
+        print("Green channel corrected.")
+        print("=====================================================")
+        
+        
     print("Demosaicing RGB image...")
     demosaiced = demosaicer.apply(mosaic)
     demosaiced = processor.normalize_uint8(demosaiced)
-    demosaicer.display(demosaiced)
+    # demosaicer.display(demosaiced)
 
     # save the demosaiced image
-    save_image(demosaiced, filename=f"Demosaiced_{config.pattern}", directory=save_folder, format="png")
+    save_image(demosaiced, filename=f"Demosaiced_{pattern}", directory=save_folder, format="png")
     print("=====================================================")
     
     print("Reconstructing hyperspectral image...")
@@ -76,10 +118,6 @@ def main(config, save_folder):
 
 if __name__ == '__main__':
     config = Config()
-    if not os.path.exists(config.output_dir):
-        os.makedirs(config.output_dir)
-    save_folder = os.path.join(config.output_dir, config.pattern, config.demosaic_method)
-    if not os.path.exists(save_folder):     
-        os.makedirs(save_folder)
-    main(config, save_folder)
+
+    main(config)
     

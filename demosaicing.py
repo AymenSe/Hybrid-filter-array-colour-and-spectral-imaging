@@ -1,110 +1,359 @@
+from matplotlib import pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.signal import convolve2d
-from typing import Tuple
-
+from colour.hints import ArrayLike, Literal, NDArrayFloat
+from colour.utilities import as_float_array, tstack, ones, tsplit
+from scipy.ndimage.filters import convolve, convolve1d
+# from colour_demosaicing.bayer import masks_CFA_Bayer
+from cfa import BayerCFA
 class Demosaicing:
-    def __init__(self, config) -> None:
-        """
-        Initialize the Demosaicing class with a specified Bayer pattern.
-        
-        Parameters:
-        pattern (str): The Bayer pattern. Default is "RGGB".
-        """
-        self.config = config
-        pattern = self.config.pattern
-        possible_patterns = ["RGGB", "RGXB"]
-        if pattern not in possible_patterns:
-            raise ValueError(f"Currently, {pattern} pattern is not supported.")
+    """
+    A class to perform Bayer CFA demosaicing using various algorithms.
+    """
+    def __init__(self, pattern: str, demosaic_method: str) -> None:
+        self.pattern = pattern
+        self.cfa_f = BayerCFA(self.pattern)
+        self.demosaic_method = demosaic_method
 
-    def green_correction_bilinear(self, mosaic: Tuple[np.ndarray, np.ndarray, np.ndarray]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        r, p_g, b = mosaic
+    def demosaicing_bilinear(self, CFA: ArrayLike) -> NDArrayFloat:
+        CFA = np.squeeze(as_float_array(CFA))
+        R_m, G_m, B_m = self.cfa_f.masks(CFA.shape)
 
-        # Green interpolation kernel
-        k_x = 1 / 4 * np.array([
-            [1, 0, 1], 
-            [0, 4, 0], 
-            [1, 0, 1]])
-        g = convolve2d(p_g, k_x, 'same')
+        H_G = as_float_array([[0, 1, 0], [1, 4, 1], [0, 1, 0]]) / 4
+        H_RB = as_float_array([[1, 2, 1], [2, 4, 2], [1, 2, 1]]) / 4
+
+        R = convolve(CFA * R_m, H_RB)
+        G = convolve(CFA * G_m, H_G)
+        B = convolve(CFA * B_m, H_RB)
+
+        return tstack([R, G, B])
+
+    def demosaicing_malvar2004(self, CFA: ArrayLike) -> NDArrayFloat:
+
+        CFA = np.squeeze(as_float_array(CFA))
+        R_m, G_m, B_m = self.cfa_f.masks(CFA.shape)
+
+        GR_GB = (
+            as_float_array(
+                [
+                    [0.0, 0.0, -1.0, 0.0, 0.0],
+                    [0.0, 0.0, 2.0, 0.0, 0.0],
+                    [-1.0, 2.0, 4.0, 2.0, -1.0],
+                    [0.0, 0.0, 2.0, 0.0, 0.0],
+                    [0.0, 0.0, -1.0, 0.0, 0.0],
+                ]
+            )
+            / 8
+        )
+
+        Rg_RB_Bg_BR = (
+            as_float_array(
+                [
+                    [0.0, 0.0, 0.5, 0.0, 0.0],
+                    [0.0, -1.0, 0.0, -1.0, 0.0],
+                    [-1.0, 4.0, 5.0, 4.0, -1.0],
+                    [0.0, -1.0, 0.0, -1.0, 0.0],
+                    [0.0, 0.0, 0.5, 0.0, 0.0],
+                ]
+            )
+            / 8
+        )
+
+        Rg_BR_Bg_RB = np.transpose(Rg_RB_Bg_BR)
+
+        Rb_BB_Br_RR = (
+            as_float_array(
+                [
+                    [0.0, 0.0, -1.5, 0.0, 0.0],
+                    [0.0, 2.0, 0.0, 2.0, 0.0],
+                    [-1.5, 0.0, 6.0, 0.0, -1.5],
+                    [0.0, 2.0, 0.0, 2.0, 0.0],
+                    [0.0, 0.0, -1.5, 0.0, 0.0],
+                ]
+            )
+            / 8
+        )
+
+        R = CFA * R_m
+        G = CFA * G_m
+        B = CFA * B_m
+
+        del G_m
+
+        # print(CFA.shape)
+        # exit()
+        G = np.where(np.logical_or(R_m == 1, B_m == 1), convolve(CFA, GR_GB), G)
+
+        RBg_RBBR = convolve(CFA, Rg_RB_Bg_BR)
+        RBg_BRRB = convolve(CFA, Rg_BR_Bg_RB)
+        RBgr_BBRR = convolve(CFA, Rb_BB_Br_RR)
+
+        del GR_GB, Rg_RB_Bg_BR, Rg_BR_Bg_RB, Rb_BB_Br_RR
+
+        # Red rows.
+        R_r = np.transpose(np.any(R_m == 1, axis=1)[None]) * ones(R.shape)
+        # Red columns.
+        R_c = np.any(R_m == 1, axis=0)[None] * ones(R.shape)
+        # Blue rows.
+        B_r = np.transpose(np.any(B_m == 1, axis=1)[None]) * ones(B.shape)
+        # Blue columns
+        B_c = np.any(B_m == 1, axis=0)[None] * ones(B.shape)
+
+        del R_m, B_m
+
+        R = np.where(np.logical_and(R_r == 1, B_c == 1), RBg_RBBR, R)
+        R = np.where(np.logical_and(B_r == 1, R_c == 1), RBg_BRRB, R)
+
+        B = np.where(np.logical_and(B_r == 1, R_c == 1), RBg_RBBR, B)
+        B = np.where(np.logical_and(R_r == 1, B_c == 1), RBg_BRRB, B)
+
+        R = np.where(np.logical_and(B_r == 1, B_c == 1), RBgr_BBRR, R)
+        B = np.where(np.logical_and(R_r == 1, R_c == 1), RBgr_BBRR, B)
+
+        del RBg_RBBR, RBg_BRRB, RBgr_BBRR, R_r, R_c, B_r, B_c
+
+        return tstack([R, G, B])
+
+    def _cnv_h(self, x: ArrayLike, y: ArrayLike) -> NDArrayFloat:
+        """Perform horizontal convolution."""
+
+        return convolve1d(x, y, mode="mirror")
+
+
+    def _cnv_v(self, x: ArrayLike, y: ArrayLike) -> NDArrayFloat:
+        """Perform vertical convolution."""
+
+        return convolve1d(x, y, mode="mirror", axis=0)
+
+
+    def demosaicing_CFA_Bayer_Menon2007(
+        self, CFA: ArrayLike,
+        pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"] = "RGGB",
+        refining_step: bool = True,
+    ):
         
-        mosaic = (r, g, b)
-        
-        return self.bilinear(mosaic)
+        CFA = np.squeeze(as_float_array(CFA))
+        R_m, G_m, B_m = self.cfa_f.masks(CFA.shape)
+
+        h_0 = as_float_array([0.0, 0.5, 0.0, 0.5, 0.0])
+        h_1 = as_float_array([-0.25, 0.0, 0.5, 0.0, -0.25])
+
+        R = CFA * R_m
+        G = CFA * G_m
+        B = CFA * B_m
+
+        G_H = np.where(G_m == 0, self._cnv_h(CFA, h_0) + self._cnv_h(CFA, h_1), G)
+        G_V = np.where(G_m == 0, self._cnv_v(CFA, h_0) + self._cnv_v(CFA, h_1), G)
+
+        C_H = np.where(R_m == 1, R - G_H, 0)
+        C_H = np.where(B_m == 1, B - G_H, C_H)
+
+        C_V = np.where(R_m == 1, R - G_V, 0)
+        C_V = np.where(B_m == 1, B - G_V, C_V)
+
+        D_H = np.abs(C_H - np.pad(C_H, ((0, 0), (0, 2)), mode="reflect")[:, 2:])
+        D_V = np.abs(C_V - np.pad(C_V, ((0, 2), (0, 0)), mode="reflect")[2:, :])
+
+        del h_0, h_1, CFA, C_V, C_H
+
+        k = as_float_array(
+            [
+                [0.0, 0.0, 1.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 3.0, 0.0, 3.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0, 1.0],
+            ]
+        )
+
+        d_H = convolve(D_H, k, mode="constant")
+        d_V = convolve(D_V, np.transpose(k), mode="constant")
+
+        del D_H, D_V
+
+        mask = d_V >= d_H
+        G = np.where(mask, G_H, G_V)
+        M = np.where(mask, 1, 0)
+
+        del d_H, d_V, G_H, G_V
+
+        # Red rows.
+        R_r = np.transpose(np.any(R_m == 1, axis=1)[None]) * ones(R.shape)
+        # Blue rows.
+        B_r = np.transpose(np.any(B_m == 1, axis=1)[None]) * ones(B.shape)
+
+        k_b = as_float_array([0.5, 0, 0.5])
+
+        R = np.where(
+            np.logical_and(G_m == 1, R_r == 1),
+            G + self._cnv_h(R, k_b) - self._cnv_h(G, k_b),
+            R,
+        )
+
+        R = np.where(
+            np.logical_and(G_m == 1, B_r == 1) == 1,
+            G + self._cnv_v(R, k_b) - self._cnv_v(G, k_b),
+            R,
+        )
+
+        B = np.where(
+            np.logical_and(G_m == 1, B_r == 1),
+            G + self._cnv_h(B, k_b) - self._cnv_h(G, k_b),
+            B,
+        )
+
+        B = np.where(
+            np.logical_and(G_m == 1, R_r == 1) == 1,
+            G + self._cnv_v(B, k_b) - self._cnv_v(G, k_b),
+            B,
+        )
+
+        R = np.where(
+            np.logical_and(B_r == 1, B_m == 1),
+            np.where(
+                M == 1,
+                B + self._cnv_h(R, k_b) - self._cnv_h(B, k_b),
+                B + self._cnv_v(R, k_b) - self._cnv_v(B, k_b),
+            ),
+            R,
+        )
+
+        B = np.where(
+            np.logical_and(R_r == 1, R_m == 1),
+            np.where(
+                M == 1,
+                R + self._cnv_h(B, k_b) - self._cnv_h(R, k_b),
+                R + self._cnv_v(B, k_b) - self._cnv_v(R, k_b),
+            ),
+            B,
+        )
+
+        RGB = tstack([R, G, B])
+
+        del R, G, B, k_b, R_r, B_r
+
+        if refining_step:
+            RGB = self.refining_step_Menon2007(RGB, tstack([R_m, G_m, B_m]), M)
+
+        del M, R_m, G_m, B_m
+
+        return RGB
+
+
+    # self.demosaicing_CFA_Bayer_DDFAPD = demosaicing_CFA_Bayer_Menon2007
+
+
+    def refining_step_Menon2007(
+        self, RGB: ArrayLike, RGB_m: ArrayLike, M: ArrayLike
+    ) -> NDArrayFloat:
+
+
+        R, G, B = tsplit(RGB)
+        R_m, G_m, B_m = tsplit(RGB_m)
+        M = as_float_array(M)
+
+        del RGB, RGB_m
+
+        # Updating of the green component.
+        R_G = R - G
+        B_G = B - G
+
+        FIR = ones(3) / 3
+
+        B_G_m = np.where(
+            B_m == 1,
+            np.where(M == 1, self._cnv_h(B_G, FIR), self._cnv_v(B_G, FIR)),
+            0,
+        )
+        R_G_m = np.where(
+            R_m == 1,
+            np.where(M == 1, self._cnv_h(R_G, FIR), self._cnv_v(R_G, FIR)),
+            0,
+        )
+
+        del B_G, R_G
+
+        G = np.where(R_m == 1, R - R_G_m, G)
+        G = np.where(B_m == 1, B - B_G_m, G)
+
+        # Updating of the red and blue components in the green locations.
+        # Red rows.
+        R_r = np.transpose(np.any(R_m == 1, axis=1)[None]) * ones(R.shape)
+        # Red columns.
+        R_c = np.any(R_m == 1, axis=0)[None] * ones(R.shape)
+        # Blue rows.
+        B_r = np.transpose(np.any(B_m == 1, axis=1)[None]) * ones(B.shape)
+        # Blue columns.
+        B_c = np.any(B_m == 1, axis=0)[None] * ones(B.shape)
+
+        R_G = R - G
+        B_G = B - G
+
+        k_b = as_float_array([0.5, 0.0, 0.5])
+
+        R_G_m = np.where(
+            np.logical_and(G_m == 1, B_r == 1),
+            self._cnv_v(R_G, k_b),
+            R_G_m,
+        )
+        R = np.where(np.logical_and(G_m == 1, B_r == 1), G + R_G_m, R)
+        R_G_m = np.where(
+            np.logical_and(G_m == 1, B_c == 1),
+            self._cnv_h(R_G, k_b),
+            R_G_m,
+        )
+        R = np.where(np.logical_and(G_m == 1, B_c == 1), G + R_G_m, R)
+
+        del B_r, R_G_m, B_c, R_G
+
+        B_G_m = np.where(
+            np.logical_and(G_m == 1, R_r == 1),
+            self._cnv_v(B_G, k_b),
+            B_G_m,
+        )
+        B = np.where(np.logical_and(G_m == 1, R_r == 1), G + B_G_m, B)
+        B_G_m = np.where(
+            np.logical_and(G_m == 1, R_c == 1),
+            self._cnv_h(B_G, k_b),
+            B_G_m,
+        )
+        B = np.where(np.logical_and(G_m == 1, R_c == 1), G + B_G_m, B)
+
+        del B_G_m, R_r, R_c, G_m, B_G
+
+        # Updating of the red (blue) component in the blue (red) locations.
+        R_B = R - B
+        R_B_m = np.where(
+            B_m == 1,
+            np.where(M == 1, self._cnv_h(R_B, FIR), self._cnv_v(R_B, FIR)),
+            0,
+        )
+        R = np.where(B_m == 1, B + R_B_m, R)
+
+        R_B_m = np.where(
+            R_m == 1,
+            np.where(M == 1, self._cnv_h(R_B, FIR), self._cnv_v(R_B, FIR)),
+            0,
+        )
+        B = np.where(R_m == 1, R - R_B_m, B)
+
+        del R_B, R_B_m, R_m
+
+        return tstack([R, G, B])
     
-    def bilinear(self, mosaic: Tuple[np.ndarray, np.ndarray, np.ndarray]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Apply bilinear interpolation to demosaic the image.
-        
-        Parameters:
-        mosaic (Tuple[np.ndarray, np.ndarray, np.ndarray]): 
-            A tuple of three 2D numpy arrays representing the red, green, and blue channels of the mosaic.
-        
-        Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray]: 
-            Interpolated red, green, and blue channels as 2D numpy arrays.
-        """
-        r, g, b = mosaic
-
-        # print(g[:4, :4])
-        
-        # Green interpolation kernel
-        k_g = 1 / 4 * np.array([
-            [0, 1, 0], 
-            [1, 0, 1], 
-            [0, 1, 0]])
-        convg = convolve2d(g, k_g, 'same')
-        g = g + convg
-   
-        # Red interpolation kernels
-        k_r_1 = 1 / 4 * np.array([[1, 0, 1], [0, 0, 0], [1, 0, 1]])
-        convr1 = convolve2d(r, k_r_1, 'same')
-        convr2 = convolve2d(r + convr1, k_g, 'same')
-        r = r + convr1 + convr2
-
-        # Blue interpolation kernels
-        k_b_1 = 1 / 4 * np.array([[1, 0, 1], [0, 0, 0], [1, 0, 1]])
-        convb1 = convolve2d(b, k_b_1, 'same')
-        convb2 = convolve2d(b + convb1, k_g, 'same')
-        b = b + convb1 + convb2
-
-        return r, g, b
-
-    def apply(self, im: Tuple[np.ndarray, np.ndarray, np.ndarray]) -> np.ndarray:
-        """
-        Apply demosaicing to the input image.
-        
-        Parameters:
-        im (Tuple[np.ndarray, np.ndarray, np.ndarray]): 
-            A tuple of three 2D numpy arrays representing the red, green, and blue channels of the mosaic.
-        
-        Returns:
-        np.ndarray: 
-            Demosaiced image as a 3D numpy array of shape (height, width, 3).
-        """
-        if self.config.demosaic_method == "bilinear":
-            r, g, b = self.bilinear(im)
-        elif self.config.demosaic_method == "green_correction_bilinear":
-            r, g, b = self.green_correction_bilinear(im)
+    
+    def apply(self, CFA: ArrayLike) -> NDArrayFloat:
+        if self.demosaic_method == "bilinear":
+            return self.demosaicing_bilinear(CFA)
+        elif self.demosaic_method == "malvar2004":
+            return self.demosaicing_malvar2004(CFA)
+        elif self.demosaic_method == "menon2007":
+            return self.demosaicing_CFA_Bayer_Menon2007(CFA)
         else:
-            raise ValueError(f"Currently, {self.config.demosaic_method} method is not supported.")
-        
-        demosaic_arr = np.array([r, g, b])
-        demosaic_arr_transformed = np.transpose(demosaic_arr, (1, 2, 0))
-        return demosaic_arr_transformed
+            raise ValueError(f"Unsupported demosaicing method: {self.demosaic_method}")
 
-    def display(self, demosaiced_image: np.ndarray) -> None:
-        """
-        Display the demosaiced image.
-        
-        Parameters:
-        demosaiced_image (np.ndarray): 
-            Demosaiced image as a 3D numpy array of shape (height, width, 3).
-        
-        Returns:
-        None
-        """
-        plt.figure(figsize=(10, 10))
-        plt.imshow(demosaiced_image.astype(np.uint8))
+    def display(self, demosaiced: NDArrayFloat) -> None:
+        plt.imshow(demosaiced)
+        plt.title(f"Demosaiced ({self.demosaic_method})")
         plt.axis('off')
-        plt.title('Demosaiced Image')
         plt.show()
+        

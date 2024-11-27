@@ -45,3 +45,4 @@ def save_image(
     print(f"Image saved at: {full_path}")
     return full_path
 
+
