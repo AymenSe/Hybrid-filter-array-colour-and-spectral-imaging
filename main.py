@@ -76,24 +76,29 @@ def process_image(pattern, demosaic_method, save_folder, config):
     if "X" in pattern:
         prev_green = green.copy()
         # Green interpolation kernel
-        k_x = 1 / 4 * np.array([
+        k_x = np.array([
             [1, 0, 1], 
             [0, 4, 0], 
-            [1, 0, 1]])
-        green = convolve2d(green, k_x, 'same')
-        green = processor.normalize_uint8(green)
+            [1, 0, 1]]
+        ) / 4
+        green = convolve2d(green, k_x, 'same') # convolve(green, k_x) # 
+        # green = processor.normalize_uint8(green)
         
-        new_mosaic = (red, green, blue)
-        mosaic = cfa.display(new_mosaic)    
-        save_image(mosaic, filename=f"Mosaic_{pattern}_corrected", directory=save_folder, format="png")
+        new_mosaic = red + green + blue
+        save_image(new_mosaic, filename=f"Mosaic_{pattern}_corrected", directory=save_folder, format="png")
         save_image(green, filename=f"Mosaic_green_{pattern}_corrected", directory=save_folder, format="png")
         print("Green channel corrected.")
         print("=====================================================")
+    else:
+        new_mosaic = red + green + blue
         
-        
+    
     print("Demosaicing RGB image...")
-    demosaiced = demosaicer.apply(mosaic)
+    demosaiced = demosaicer.apply(new_mosaic)
     demosaiced = processor.normalize_uint8(demosaiced)
+    
+    # print(demosaiced[:4, :4])
+    # exit()
     # demosaicer.display(demosaiced)
 
     # save the demosaiced image

@@ -1,3 +1,4 @@
+from typing import Tuple
 from matplotlib import pyplot as plt
 import numpy as np
 from colour.hints import ArrayLike, Literal, NDArrayFloat
@@ -14,10 +15,39 @@ class Demosaicing:
         self.cfa_f = BayerCFA(self.pattern)
         self.demosaic_method = demosaic_method
 
+    def masks(self, shape: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Generate masks for the CFA pattern.
+
+        Parameters:
+        - shape: Tuple representing the height and width of the image.
+
+        Returns:
+        - A tuple of masks (R, G, B) for the CFA.
+        """
+        if self.pattern == "RGXB":
+            pattern_tmp = "RGGB"
+        elif self.pattern == "BGXR":
+            pattern_tmp = "BGGR"
+        elif self.pattern == "GRBX":
+            pattern_tmp = "GRBG"
+        elif self.pattern == "GBRX":
+            pattern_tmp = "GBRG"
+        else:
+            pattern_tmp = self.pattern
+            
+        channels = {channel: np.zeros(shape, dtype=bool) for channel in "RGB"}
+        for channel, (y, x) in zip(pattern_tmp, [(0, 0), (0, 1), (1, 0), (1, 1)]):
+            channel = channel.upper()
+            channels[channel][y::2, x::2] = 1
+        return tuple(channels.values())
+    
     def demosaicing_bilinear(self, CFA: ArrayLike) -> NDArrayFloat:
         CFA = np.squeeze(as_float_array(CFA))
-        R_m, G_m, B_m = self.cfa_f.masks(CFA.shape)
-
+        # print(CFA.shape)
+        # exit()
+        R_m, G_m, B_m = self.masks(CFA.shape)
+        
         H_G = as_float_array([
             [0, 1, 0], 
             [1, 4, 1], 
@@ -39,7 +69,7 @@ class Demosaicing:
     def demosaicing_malvar2004(self, CFA: ArrayLike) -> NDArrayFloat:
 
         CFA = np.squeeze(as_float_array(CFA))
-        R_m, G_m, B_m = self.cfa_f.masks(CFA.shape)
+        R_m, G_m, B_m = self.masks(CFA.shape)
 
         GR_GB = (
             as_float_array(
@@ -141,7 +171,7 @@ class Demosaicing:
     ):
         
         CFA = np.squeeze(as_float_array(CFA))
-        R_m, G_m, B_m = self.cfa_f.masks(CFA.shape)
+        R_m, G_m, B_m = self.masks(CFA.shape)
 
         h_0 = as_float_array([0.0, 0.5, 0.0, 0.5, 0.0])
         h_1 = as_float_array([-0.25, 0.0, 0.5, 0.0, -0.25])
