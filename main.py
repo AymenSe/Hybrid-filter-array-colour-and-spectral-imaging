@@ -34,7 +34,7 @@ def main(config):
        
 def process_image(pattern, demosaic_method, save_folder, config):     
     # Initialize objects
-    processor = HyperspectralImageProcessor(config.hsi_path)
+    processor = HyperspectralImageProcessor(config.hsi_path, config.img_path)
     # cfa = CFA(config.pattern)
     cfa = BayerCFA(pattern)
     # demosaicer = Demosaicing(config)
@@ -48,12 +48,12 @@ def process_image(pattern, demosaic_method, save_folder, config):
     # print(metadata)
     # exit()
     # wavelengths = processor.get_wavelengths()
-    print("=====================================================")
+    # print("=====================================================")
     
     
     
     print("Creating RGB image...")
-    rgb_image = processor.create_rgb_image(config.rgb_indices)
+    rgb_image = processor.create_rgb_image()
     save_image(rgb_image, filename="RGB", directory=save_folder, format="png")
     normalized_rgb = processor.normalize_uint8(rgb_image)
     print("=====================================================")
@@ -68,7 +68,6 @@ def process_image(pattern, demosaic_method, save_folder, config):
     save_image(green, filename=f"Mosaic_green_{pattern}", directory=save_folder, format="png")
     save_image(blue, filename=f"Mosaic_blue_{pattern}", directory=save_folder, format="png")
     print("=====================================================")
-    
     
     # print(mosaic.shape)
     
@@ -118,6 +117,10 @@ def process_image(pattern, demosaic_method, save_folder, config):
 
 if __name__ == '__main__':
     config = Config()
-
-    main(config)
+    all_files = os.listdir(config.data_dir)
+    all_files = [f for f in all_files if f.endswith(".hdr")]
+    for i, f in enumerate(all_files):
+        print(f"{i+1}. {f}")
+        config.hsi_path = os.path.join(config.data_dir, f)
+        main(config)
     

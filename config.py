@@ -1,9 +1,10 @@
 from typing import Tuple, List
 class Config:
-    hsi_path: str = "database/REFLECTANCE_HS-DATASET_2023-03-22_012.hdr"
+    data_dir: str = "data"
+    hsi_path: str = None
+    img_path: str = None
     output_dir: str = "output"
-    rgb_indices: Tuple[int, int, int] = (70, 53, 19)
-    band_indices: Tuple[int, ...] = (29,)
-    pattern: List[str] = ["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "GBRX", "GRBX", "BGRX"]
+    pattern: List[str] = ["RGGB", "BGGR", "GRBG", "GBRG", 
+                          "RGXB", "BGXR", "GRBX", "GBRX"]
     demosaic_method: List[str] = ["bilinear", "malvar2004", "menon2007"]
     

@@ -131,7 +131,7 @@ class BayerCFA:
     Class for Bayer Color Filter Array (CFA) operations with extended patterns.
     """
 
-    def __init__(self, pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "GBRX", "GRBX", "BGRX"] = "RGGB"):
+    def __init__(self, pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"] = "RGGB"):
         """
         Initialize the BayerCFA class with a given CFA pattern.
 
@@ -140,7 +140,7 @@ class BayerCFA:
         """
         self.pattern = validate_method(
             pattern.upper(),
-            ("RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "GBRX", "GRBX", "BGRX"),
+            ("RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"),
             '"{0}" CFA pattern is invalid, it must be one of {1}!',
         )
 

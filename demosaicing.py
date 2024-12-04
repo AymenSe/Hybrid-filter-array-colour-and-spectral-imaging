@@ -18,8 +18,17 @@ class Demosaicing:
         CFA = np.squeeze(as_float_array(CFA))
         R_m, G_m, B_m = self.cfa_f.masks(CFA.shape)
 
-        H_G = as_float_array([[0, 1, 0], [1, 4, 1], [0, 1, 0]]) / 4
-        H_RB = as_float_array([[1, 2, 1], [2, 4, 2], [1, 2, 1]]) / 4
+        H_G = as_float_array([
+            [0, 1, 0], 
+            [1, 4, 1], 
+            [0, 1, 0]]
+        ) / 4
+        
+        H_RB = as_float_array([
+            [1, 2, 1], 
+            [2, 4, 2], 
+            [1, 2, 1]]
+        ) / 4
 
         R = convolve(CFA * R_m, H_RB)
         G = convolve(CFA * G_m, H_G)

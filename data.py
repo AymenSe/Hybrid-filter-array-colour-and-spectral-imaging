@@ -3,7 +3,7 @@ import spectral as sp
 from typing import Tuple, Dict, List
 
 class HyperspectralImageProcessor:
-    def __init__(self, hdr_file_path: str) -> None:
+    def __init__(self, hdr_file_path: str = None, img_file_path: str = None) -> None:
         """
         Initialize the processor with the .hdr file path.
         
@@ -11,7 +11,8 @@ class HyperspectralImageProcessor:
         hdr_file_path (str): Path to the .hdr file of the hyperspectral image.
         """
         self.hdr_file_path = hdr_file_path
-        self.hdr = sp.envi.open(hdr_file_path)
+        self.img_file_path = img_file_path
+        self.hdr = sp.envi.open(hdr_file_path,  self.img_file_path if self.img_file_path else None)
         self.wvl: List[float] = self.hdr.bands.centers
         self.rows: int = self.hdr.nrows
         self.cols: int = self.hdr.ncols
@@ -61,7 +62,7 @@ class HyperspectralImageProcessor:
         """
         return np.array(self.img)
 
-    def create_rgb_image(self, band_indices: Tuple[int, int, int]) -> np.ndarray:
+    def create_rgb_image(self) -> np.ndarray:
         """
         Create an RGB image from selected bands.
         
@@ -71,6 +72,9 @@ class HyperspectralImageProcessor:
         Returns:
         np.ndarray: Normalized RGB image as a NumPy array.
         """
+        band_indices = list(self.meta["default bands"])
+        band_indices = [int(band) for band in band_indices]
+
         if len(band_indices) != 3:
             raise ValueError("Three band indices are required to create an RGB image.")
         
