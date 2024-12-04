@@ -92,7 +92,6 @@ def process_image(pattern, demosaic_method, save_folder, config):
     else:
         new_mosaic = red + green + blue
         
-    
     print("Demosaicing RGB image...")
     demosaiced = demosaicer.apply(new_mosaic)
     demosaiced = processor.normalize_uint8(demosaiced)
