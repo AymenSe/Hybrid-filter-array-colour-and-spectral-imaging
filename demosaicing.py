@@ -15,7 +15,7 @@ class Demosaicing:
         self.cfa_f = BayerCFA(self.pattern)
         self.demosaic_method = demosaic_method
 
-    def masks(self, shape: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def masks(self, shape: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Generate masks for the CFA pattern.
 
@@ -36,7 +36,7 @@ class Demosaicing:
         else:
             pattern_tmp = self.pattern
             
-        channels = {channel: np.zeros(shape, dtype=bool) for channel in "RGB"}
+        channels = {channel: np.zeros(shape, dtype=bool) for channel in "RGXB"}
         for channel, (y, x) in zip(pattern_tmp, [(0, 0), (0, 1), (1, 0), (1, 1)]):
             channel = channel.upper()
             channels[channel][y::2, x::2] = 1
@@ -46,7 +46,7 @@ class Demosaicing:
         CFA = np.squeeze(as_float_array(CFA))
         # print(CFA.shape)
         # exit()
-        R_m, G_m, B_m = self.masks(CFA.shape)
+        R_m, G_m, Y_m, B_m = self.masks(CFA.shape)
         
         H_G = as_float_array([
             [0, 1, 0], 

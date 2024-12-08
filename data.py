@@ -87,6 +87,31 @@ class HyperspectralImageProcessor:
         )
         return rgb_image / np.max(rgb_image)
 
+    def create_rgyb_image(self, y_idx: int) -> np.ndarray:
+        """
+        Create an RGYB image from selected bands.
+        
+        Returns:
+        np.ndarray: Normalized RGYB image as a NumPy array.
+        """
+        band_indices = list(self.meta["default bands"]) # RGB
+        band_indices = [int(band) for band in band_indices] # [12, 8, 4]
+        band_indices.insert(2, y_idx) # [12, 8, 6, 4]
+
+        if len(band_indices) != 4:
+            raise ValueError("Four band indices are required to create an RGYB image.")
+        
+        img_arr = self.to_array()
+        
+        rgyb_image = np.stack(
+            (img_arr[:, :, band_indices[0]],
+             img_arr[:, :, band_indices[1]],
+             img_arr[:, :, band_indices[2]],
+             img_arr[:, :, band_indices[3]]),
+            axis=-1
+        )
+        return rgyb_image / np.max(rgyb_image)
+    
     @staticmethod
     def normalize_uint8(img: np.ndarray, maxval: int = 255, minval: int = 0) -> np.ndarray:
         """
