@@ -3,9 +3,7 @@ data/samples/
 data/samples/*
 data/*
 
-output/
-output/*/*/*/*.png
-output/*/*/*/*.csv
+
 
 output_1
 output_1/*/*/*/*.png
