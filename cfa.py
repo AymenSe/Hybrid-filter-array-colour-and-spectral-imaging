@@ -13,7 +13,7 @@ class BayerCFA:
     Class for Bayer Color Filter Array (CFA) operations with extended patterns.
     """
 
-    def __init__(self, pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"] = "RGGB"):
+    def __init__(self, pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGYB", "BGYR", "GRBY", "GBRY"] = "RGGB"):
         """
         Initialize the BayerCFA class with a given CFA pattern.
 
@@ -22,7 +22,7 @@ class BayerCFA:
         """
         self.pattern = validate_method(
             pattern.upper(),
-            ("RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"),
+            ("RGGB", "BGGR", "GRBG", "GBRG", "RGYB", "BGYR", "GRBY", "GBRY"),
             '"{0}" CFA pattern is invalid, it must be one of {1}!',
         )
 
@@ -57,7 +57,7 @@ class BayerCFA:
         """
         HSI = as_float_array(HSI)
         
-        if HSI.ndim == 3:
+        if self.pattern in ("RGGB", "BGGR", "GRBG", "GBRG"):
             print("HSI is RGB")
             R, G, B = tsplit(HSI)
             R_m, G_m, B_m = self.masks(HSI.shape[:2])   
@@ -66,7 +66,7 @@ class BayerCFA:
             g = G * G_m
             b = B * B_m
             return (r, g, b)
-        elif HSI.ndim == 4:
+        else:
             print("HSI is RGYB")
             R, G, Y, B = tsplit(HSI)
             R_m, G_m, Y_m, B_m = self.masks(HSI.shape[:2])   

@@ -59,6 +59,9 @@ def process_image(pattern, demosaic_method, save_folder, config):
 
     else:
         org_image = processor.create_rgyb_image(config.y_idx)
+        print(org_image.shape)
+        
+        # rgb_without_y = org_image[:, :, :3]
         save_image(org_image, filename="RGYB", directory=save_folder, format="png")
     normalized_org = processor.normalize_uint8(org_image)
     print("=====================================================")
