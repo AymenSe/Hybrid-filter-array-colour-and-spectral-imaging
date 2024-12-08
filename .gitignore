@@ -4,7 +4,6 @@ data/samples/*
 data/*
 
 
-
 output_1
 output_1/*/*/*/*.png
 output_1/*/*/*/*.csv
