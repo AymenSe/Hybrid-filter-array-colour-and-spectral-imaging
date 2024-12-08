@@ -25,19 +25,19 @@ class Demosaicing:
         Returns:
         - A tuple of masks (R, G, B) for the CFA.
         """
-        if self.pattern == "RGXB":
-            pattern_tmp = "RGGB"
-        elif self.pattern == "BGXR":
-            pattern_tmp = "BGGR"
-        elif self.pattern == "GRBX":
-            pattern_tmp = "GRBG"
-        elif self.pattern == "GBRX":
-            pattern_tmp = "GBRG"
-        else:
-            pattern_tmp = self.pattern
+        # if self.pattern == "RGYB":
+        #     pattern_tmp = "RGGB"
+        # elif self.pattern == "BGYR":
+        #     pattern_tmp = "BGGR"
+        # elif self.pattern == "GRBY":
+        #     pattern_tmp = "GRBG"
+        # elif self.pattern == "GBRX":
+        #     pattern_tmp = "GBRG"
+        # else:
+        #     pattern_tmp = self.pattern
             
-        channels = {channel: np.zeros(shape, dtype=bool) for channel in "RGXB"}
-        for channel, (y, x) in zip(pattern_tmp, [(0, 0), (0, 1), (1, 0), (1, 1)]):
+        channels = {channel: np.zeros(shape, dtype=bool) for channel in "RGYB"}
+        for channel, (y, x) in zip(self.pattern, [(0, 0), (0, 1), (1, 0), (1, 1)]):
             channel = channel.upper()
             channels[channel][y::2, x::2] = 1
         return tuple(channels.values())
@@ -54,17 +54,20 @@ class Demosaicing:
             [0, 1, 0]]
         ) / 4
         
-        H_RB = as_float_array([
+
+        
+        H_RBY = as_float_array([
             [1, 2, 1], 
             [2, 4, 2], 
             [1, 2, 1]]
         ) / 4
 
-        R = convolve(CFA * R_m, H_RB)
+        R = convolve(CFA * R_m, H_RBY)
         G = convolve(CFA * G_m, H_G)
-        B = convolve(CFA * B_m, H_RB)
+        Y = convolve(CFA * Y_m, H_RBY)
+        B = convolve(CFA * B_m, H_RBY)
 
-        return tstack([R, G, B])
+        return tstack([R, G, Y, B])
 
     def demosaicing_malvar2004(self, CFA: ArrayLike) -> NDArrayFloat:
 

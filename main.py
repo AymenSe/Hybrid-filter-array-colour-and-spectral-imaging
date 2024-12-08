@@ -120,6 +120,7 @@ def process_image(pattern, demosaic_method, save_folder, config):
     save_image(demosaiced, filename=f"Demosaiced_{pattern}", directory=save_folder, format="png")
     print("=====================================================")
     
+    exit()
     print("Reconstructing hyperspectral image...")
     reconstructed_hsi = None
     

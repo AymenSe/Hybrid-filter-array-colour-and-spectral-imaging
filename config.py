@@ -5,7 +5,7 @@ class Config:
     img_path: str = None
     y_idx: int = 62
     output_dir: str = "output"
-    pattern: List[str] = ["RGXB", "BGXR", "GRBX", "GBRX"] # ["RGGB", "BGGR", "GRBG", "GBRG"] # 
+    pattern: List[str] = ["RGYB"] # , "BGXR", "GRBX", "GBRX"] # ["RGGB", "BGGR", "GRBG", "GBRG"] # 
                           
-    demosaic_method: List[str] = ["bilinear", "malvar2004", "menon2007"]
+    demosaic_method: List[str] = ["bilinear"] #, "malvar2004", "menon2007"]
     
