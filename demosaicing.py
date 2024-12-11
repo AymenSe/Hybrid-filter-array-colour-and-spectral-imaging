@@ -10,62 +10,41 @@ class Demosaicing:
     """
     A class to perform Bayer CFA demosaicing using various algorithms.
     """
-    def __init__(self, pattern: str, demosaic_method: str) -> None:
+    def __init__(self, pattern: str, demosaic_method: str):
         self.pattern = pattern
-        self.cfa_f = BayerCFA(self.pattern)
         self.demosaic_method = demosaic_method
 
-    def masks(self, shape: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Generate masks for the CFA pattern.
+    def demosaicing_bilinear(self, HSI, masks):
+        HSI = np.squeeze(as_float_array(HSI))
 
-        Parameters:
-        - shape: Tuple representing the height and width of the image.
-
-        Returns:
-        - A tuple of masks (R, G, B) for the CFA.
-        """
-        if self.pattern == "RGXB":
-            pattern_tmp = "RGGB"
-        elif self.pattern == "BGXR":
-            pattern_tmp = "BGGR"
-        elif self.pattern == "GRBX":
-            pattern_tmp = "GRBG"
-        elif self.pattern == "GBRX":
-            pattern_tmp = "GBRG"
-        else:
-            pattern_tmp = self.pattern
-            
-        channels = {channel: np.zeros(shape, dtype=bool) for channel in "RGB"}
-        for channel, (y, x) in zip(pattern_tmp, [(0, 0), (0, 1), (1, 0), (1, 1)]):
-            channel = channel.upper()
-            channels[channel][y::2, x::2] = 1
-        return tuple(channels.values())
+        if self.pattern == "RGGB" or self.pattern == "RGYB":
     
-    def demosaicing_bilinear(self, CFA: ArrayLike) -> NDArrayFloat:
-        CFA = np.squeeze(as_float_array(CFA))
-        # print(CFA.shape)
-        # exit()
-        R_m, G_m, B_m = self.masks(CFA.shape)
+            H_G = as_float_array([
+                [0, 1, 0], 
+                [1, 4, 1], 
+                [0, 1, 0]]
+            ) / 4
+            
+            H_RBY = as_float_array([
+                [1, 2, 1], 
+                [2, 4, 2], 
+                [1, 2, 1]]
+            ) / 4
+            
+            demosaiced = {}
+            for channel in masks:
+                if channel == "R" or channel == "B" or channel == "Y":
+                    kernel = H_RBY
+                else:
+                    kernel = H_G
+                demosaiced[channel] = convolve(HSI * masks[channel], kernel)
+                
+            return demosaiced
         
-        H_G = as_float_array([
-            [0, 1, 0], 
-            [1, 4, 1], 
-            [0, 1, 0]]
-        ) / 4
-        
-        H_RB = as_float_array([
-            [1, 2, 1], 
-            [2, 4, 2], 
-            [1, 2, 1]]
-        ) / 4
-
-        R = convolve(CFA * R_m, H_RB)
-        G = convolve(CFA * G_m, H_G)
-        B = convolve(CFA * B_m, H_RB)
-
-        return tstack([R, G, B])
-
+        else:
+            print("Pattern not supported yet.")
+            
+       
     def demosaicing_malvar2004(self, CFA: ArrayLike) -> NDArrayFloat:
 
         CFA = np.squeeze(as_float_array(CFA))
@@ -380,9 +359,9 @@ class Demosaicing:
         return tstack([R, G, B])
     
     
-    def apply(self, CFA: ArrayLike) -> NDArrayFloat:
+    def apply(self, HSI, masks):
         if self.demosaic_method == "bilinear":
-            return self.demosaicing_bilinear(CFA)
+            return self.demosaicing_bilinear(HSI, masks)
         elif self.demosaic_method == "malvar2004":
             return self.demosaicing_malvar2004(CFA)
         elif self.demosaic_method == "menon2007":
@@ -390,9 +369,4 @@ class Demosaicing:
         else:
             raise ValueError(f"Unsupported demosaicing method: {self.demosaic_method}")
 
-    def display(self, demosaiced: NDArrayFloat) -> None:
-        plt.imshow(demosaiced)
-        plt.title(f"Demosaiced ({self.demosaic_method})")
-        plt.axis('off')
-        plt.show()
         
