@@ -46,6 +46,11 @@ def save_image(
     return full_path
 
 
+def gamma_correction(image, gamma=2.2):
+    image = image / 255.0
+    corrected_image = np.power(image, 1/gamma)
+    corrected_image = (corrected_image * 255).astype(np.uint8)
+    return corrected_image
 
 
-    
+

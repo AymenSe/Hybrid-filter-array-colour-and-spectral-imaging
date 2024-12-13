@@ -5,7 +5,7 @@ from colour.hints import ArrayLike, Literal, NDArrayFloat
 from colour.utilities import as_float_array, tstack, ones, tsplit
 from scipy.ndimage.filters import convolve, convolve1d
 # from colour_demosaicing.bayer import masks_CFA_Bayer
-from cfa import BayerCFA
+from cfa import SFA
 class Demosaicing:
     """
     A class to perform Bayer CFA demosaicing using various algorithms.
@@ -14,35 +14,50 @@ class Demosaicing:
         self.pattern = pattern
         self.demosaic_method = demosaic_method
 
-    def demosaicing_bilinear(self, HSI, masks):
-        HSI = np.squeeze(as_float_array(HSI))
-
-        if self.pattern == "RGGB" or self.pattern == "RGYB":
-    
-            H_G = as_float_array([
-                [0, 1, 0], 
-                [1, 4, 1], 
-                [0, 1, 0]]
-            ) / 4
-            
-            H_RBY = as_float_array([
-                [1, 2, 1], 
-                [2, 4, 2], 
-                [1, 2, 1]]
-            ) / 4
-            
-            demosaiced = {}
-            for channel in masks:
-                if channel == "R" or channel == "B" or channel == "Y":
-                    kernel = H_RBY
-                else:
-                    kernel = H_G
-                demosaiced[channel] = convolve(HSI * masks[channel], kernel)
-                
-            return demosaiced
+    def demosaicing_bilinear(self, mosaic, masks):
         
-        else:
-            print("Pattern not supported yet.")
+        H_G = as_float_array([
+            [0, 1, 0], 
+            [1, 4, 1], 
+            [0, 1, 0]]
+        ) / 4
+        
+        H_RBY = as_float_array([
+            [1, 2, 1], 
+            [2, 4, 2], 
+            [1, 2, 1]]
+        ) / 4
+
+        demosaiced = {}
+        # print(mosaic.keys())
+        for channel in mosaic.keys():
+            if channel in ["R", "B", "Y"]:
+                kernel = H_RBY
+                # mosaic_channel = mosaic[channel]
+            # if channel == "R":
+            #     kernel = H_RBY
+            #     mosaic_channel = mosaic['R']    
+            # elif channel == "B":
+            #     kernel = H_RBY
+            #     mosaic_channel = mosaic['B']    
+            # elif channel == "Y":
+            #     kernel = H_RBY
+            #     mosaic_channel = mosaic['Y']
+            elif channel == "G":
+                kernel = H_G
+            
+            mosaic_channel = mosaic[channel]
+                
+            # print(f"Demosaicing {channel} channel...")
+            # print(f"mask shape: {mask.shape}")
+            # print(mask[120:128, 120:128])
+            # print(f"tmp shape: {tmp.shape}")
+            # print(tmp[120:128, 120:128])
+            demosaiced[channel] = convolve(mosaic_channel, kernel)
+            # print(f"Demosaicing {channel} channel done.")
+            # print(demosaiced[channel][120:128, 120:128])
+                
+        return demosaiced
             
        
     def demosaicing_malvar2004(self, CFA: ArrayLike) -> NDArrayFloat:
@@ -359,9 +374,9 @@ class Demosaicing:
         return tstack([R, G, B])
     
     
-    def apply(self, HSI, masks):
+    def apply(self, mosaic, masks):
         if self.demosaic_method == "bilinear":
-            return self.demosaicing_bilinear(HSI, masks)
+            return self.demosaicing_bilinear(mosaic, masks)
         elif self.demosaic_method == "malvar2004":
             return self.demosaicing_malvar2004(CFA)
         elif self.demosaic_method == "menon2007":
@@ -369,4 +384,5 @@ class Demosaicing:
         else:
             raise ValueError(f"Unsupported demosaicing method: {self.demosaic_method}")
 
-        
+    def normalize_uint8(self, image: np.ndarray) -> np.ndarray:
+        return (image / image.max() * 255).astype(np.uint8)
