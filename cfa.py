@@ -11,12 +11,12 @@ class SFA:
         self.pattern = pattern
         self.band_mapping = {
             'V': 1, # Assuming the 1st band violet (index 0) corresponds to 400-450nm middle of the band 415nm
-            'B': list(range(1,11)), # Assuming the 3rd band blue (index 2) corresponds to 450-490nm middle of the band 467.5nm
+            'B': 6, # list(range(1,11)), # Assuming the 3rd band blue (index 2) corresponds to 450-490nm middle of the band 467.5nm
             'C': 9, # Assuming the 3rd band cyan (index 2) corresponds to 490-500nm  middle of the band 492.5nm
-            'G': list(range(11,21)), # Assuming the 3rd band (index 2) corresponds to 500-565nm middle of the band 532.5nm
+            'G': 16, # list(range(11,21)), # Assuming the 3rd band (index 2) corresponds to 500-565nm middle of the band 532.5nm
             'Y': 17, # Assuming the 3rd band (index 2) corresponds to 565-590nm middle of the band 577.5nm
             'O': 20, # Assuming the 3rd band (index 2) corresponds to 590-625nm middle of the band 607.5nm
-            'R': list(range(21,31)), # Assuming the 3rd band (index 2) corresponds to 625-750nm  middle of the band 687.5nm
+            'R': 26,# list(range(21,31)), # Assuming the 3rd band (index 2) corresponds to 625-750nm  middle of the band 687.5nm
         } 
         
     def masks(self, shape):
@@ -51,7 +51,7 @@ class SFA:
         # print(f"HSI shape: {HSI.shape}")
         dynamic_range = 2**16 - 1
         rgb_dynamic_range = 2**8 - 1
-        # normalize all the bands between 0 and 1
+        # # normalize all the bands between 0 and 1
         HSI = HSI / dynamic_range
         # print(HSI.max(), HSI.min())
         
@@ -62,16 +62,18 @@ class SFA:
         
         for channel in channel_keys:
             mask = channel_masks[channel]
-            if channel in ['R', 'G', 'B']:
-                # band_channel = rgb[:, :, 0]
-                band_channel = np.stack([HSI[:, :, i] for i in self.band_mapping[channel]], axis=-1)
-                band_channel = band_channel.mean(axis=-1)
-            else:
-                band_channel = HSI[:, :, self.band_mapping[channel]]
+            # if channel in ['R', 'G', 'B']:
+            #     # band_channel = rgb[:, :, 0]
+            #     band_channel = np.stack([HSI[:, :, i] for i in self.band_mapping[channel]], axis=-1)
+            #     band_channel = band_channel.mean(axis=-1)
+            # else:
+            band_channel = HSI[:, :, self.band_mapping[channel]]
                 
             band_channel = band_channel.squeeze()
             # from 0-1 to 0-255
             band_channel = band_channel * rgb_dynamic_range
+            # assert band_channel.max() <= rgb_dynamic_range, "The band channel max value {} must be less than or equal to the dynamic range of the RGB image {}.".format(band_channel.max(), rgb_dynamic_range)
+            # assert band_channel.min() >= 0, "The band channel min value {} must be greater than or equal to 0.".format(band_channel.min())
             
             assert mask.shape == band_channel.shape, "The mask shape {} must be the same as the image shape {}.".format(mask.shape, band_channel.shape)
             mosaic[channel] = band_channel * mask

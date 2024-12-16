@@ -22,13 +22,21 @@ def main(config):
         os.makedirs(config.output_dir)
         
     for scene in os.listdir(config.data_dir):
-        for pattern in config.pattern:
-            for green_correction_method in config.green_correction_methods:
-                for demosaic_method in config.demosaic_method:
-                    print(f"Scene: {scene} ====== Pattern: {pattern} ====== Demosaic method: {demosaic_method}")
-                    save_folder = os.path.join(config.output_dir, scene, pattern, green_correction_method, demosaic_method)
-                    process_image(scene, pattern, green_correction_method, demosaic_method, save_folder, config)
-                    print("=====================================================")
+        if scene == "beads_ms" or scene == "oil_painting_ms":
+            for pattern in config.pattern:
+                if pattern == "RGGB":
+                    for demosaic_method in config.demosaic_method:
+                        print(f"Scene: {scene} ====== Pattern: {pattern} ====== Demosaic method: {demosaic_method}")
+                        save_folder = os.path.join(config.output_dir, scene, pattern, demosaic_method)
+                        process_image(scene, pattern, None, demosaic_method, save_folder, config)
+                        print("=====================================================")
+                else:
+                    for green_correction_method in config.green_correction_methods:
+                        for demosaic_method in config.demosaic_method:
+                            print(f"Scene: {scene} ====== Pattern: {pattern} ====== Demosaic method: {demosaic_method}")
+                            save_folder = os.path.join(config.output_dir, scene, pattern, green_correction_method, demosaic_method)
+                            process_image(scene, pattern, green_correction_method, demosaic_method, save_folder, config)
+                            print("=====================================================")
 
 
 def process_image(scene, pattern, green_correction_method, demosaic_method, save_folder, config):     
@@ -44,15 +52,21 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
     ms, rgb = data_processor.load_scene(scene)
     # print(f"RGB shape: {rgb.shape} | MS shape: {ms.shape}")
     # print(f"RGB max: {rgb.max()} | RGB min: {rgb.min()}")
-    save_image(rgb, filename="RGB", directory=save_folder, format="png")
-    print("RGB image saved.")
-    print("=====================================================")
-    print("\n\n")
+    # save_image(rgb, filename="RGB", directory=save_folder, format="png")
+    # print("RGB image saved.")
+    # print("=====================================================")
+    # print("\n\n")
+    true_red = rgb[:, :, 0]
+    true_green = rgb[:, :, 1]
+    true_blue = rgb[:, :, 2]
     
     
     
     print("Applying CFA...")
     mosaic_dict, channel_masks = sfa.apply(ms)
+    mosaic_dict['R'] = true_red * channel_masks['R']
+    mosaic_dict['G'] = true_green * channel_masks['G']
+    mosaic_dict['B'] = true_blue * channel_masks['B']
     # print(mosaic_dict['G'][120:128, 120:128])
     
     for channel in mosaic_dict.keys():
@@ -68,6 +82,7 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
     # Correcting the green channel
     if pattern != "RGGB":
         if green_correction_method == "interpolation":
+            print("Green interpolation kernel")
             # Green interpolation kernel
             k_x = np.array([
                 [1, 0, 1], 
@@ -82,6 +97,7 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
             # print(f"mosaic_dict['G']  max: {mosaic_dict['G'].max()} | mosaic_dict['G']  min: {mosaic_dict['G'].min()}")
             
         elif green_correction_method == "interpolation_based_gradient":
+            print("Green interpolation kernel")
             # Green interpolation kernel
             k_x = np.array([
                 [1, 0, 1], 
@@ -102,7 +118,6 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
             gradients_of_yellow = convolve(mosaic_dict['Y'], g_x)
             
             avg_green = convolve(mosaic_dict['G'], k_x)
-            
             
             mosaic_dict['G'] = avg_green + 0.25 * gradients_of_yellow
 
@@ -145,11 +160,12 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
     print("Reconstructing RGB image...")
     # print(demosaiced.keys())
     # exit()
-    rgb_hat = np.stack([demosaiced['R'], demosaiced['G'], demosaiced['B']], axis=-1)
-    rgb_hat = (rgb_hat / rgb_hat.max() * 255).astype(np.uint8)
+    rgb_hat = tstack([demosaiced['R'], demosaiced['G'], demosaiced['B']])
+    # print(f"rgb_hat  shape: {rgb_hat.shape}")
+    rgb_hat = rgb_hat.astype(np.uint8)
     # if green_correction_method == "interpolation_based_gradient":
         # rgb_hat = gamma_correction(rgb_hat, gamma=2.0)
-    rgb_hat = gamma_correction(rgb_hat)
+    # rgb_hat = gamma_correction(rgb_hat)
     # print(f"rgb_hat  shape: {rgb_hat.shape}")
     # print(f"rgb_hat  max: {rgb_hat.max()} | rgb_hat min: {rgb_hat.min()}")
     save_image(rgb_hat, filename=f"demosaiced_RGB", directory=save_folder, format="png")
@@ -160,7 +176,8 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
     # print("Reconstructing hyperspectral image...")
     # reconstructed_hsi = None
     
-
+def normalize_uint8(image):
+    return (image / 255.0).astype(np.float32)
         
 if __name__ == '__main__':
     config = Config()

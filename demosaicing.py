@@ -4,11 +4,12 @@ import numpy as np
 from colour.hints import ArrayLike, Literal, NDArrayFloat
 from colour.utilities import as_float_array, tstack, ones, tsplit
 from scipy.ndimage.filters import convolve, convolve1d
-# from colour_demosaicing.bayer import masks_CFA_Bayer
+# from colour_demosaicing.bayer import masks_mosaic_Bayer
 from cfa import SFA
+
 class Demosaicing:
     """
-    A class to perform Bayer CFA demosaicing using various algorithms.
+    A class to perform Bayer mosaic demosaicing using various algorithms.
     """
     def __init__(self, pattern: str, demosaic_method: str):
         self.pattern = pattern
@@ -60,10 +61,17 @@ class Demosaicing:
         return demosaiced
             
        
-    def demosaicing_malvar2004(self, CFA: ArrayLike) -> NDArrayFloat:
+    def demosaicing_malvar2004(self, mosaic, masks):
+        demosaiced = {}
 
+        R_m, G_m, B_m = masks['R'], masks['G'], masks['B']
+        
+        # plt.imshow(R_m, cmap='gray'); plt.title('Red Mask'); plt.show()
+        # plt.imshow(G_m, cmap='gray'); plt.title('Green Mask'); plt.show()
+        # plt.imshow(B_m, cmap='gray'); plt.title('Blue Mask'); plt.show()
+
+        CFA = mosaic['R'] + mosaic['G'] + mosaic['B']
         CFA = np.squeeze(as_float_array(CFA))
-        R_m, G_m, B_m = self.masks(CFA.shape)
 
         GR_GB = (
             as_float_array(
@@ -112,8 +120,6 @@ class Demosaicing:
 
         del G_m
 
-        # print(CFA.shape)
-        # exit()
         G = np.where(np.logical_or(R_m == 1, B_m == 1), convolve(CFA, GR_GB), G)
 
         RBg_RBBR = convolve(CFA, Rg_RB_Bg_BR)
@@ -143,8 +149,18 @@ class Demosaicing:
         B = np.where(np.logical_and(R_r == 1, R_c == 1), RBgr_BBRR, B)
 
         del RBg_RBBR, RBg_BRRB, RBgr_BBRR, R_r, R_c, B_r, B_c
+        
+        # plt.imshow(R, cmap='gray'); plt.title('Red Channel'); plt.show()
+        # plt.imshow(G, cmap='gray'); plt.title('Green Channel'); plt.show()
+        # plt.imshow(B, cmap='gray'); plt.title('Blue Channel'); plt.show()
 
-        return tstack([R, G, B])
+        demosaiced['R'] = R
+        demosaiced['G'] = G
+        demosaiced['B'] = B
+
+        return demosaiced
+
+
 
     def _cnv_h(self, x: ArrayLike, y: ArrayLike) -> NDArrayFloat:
         """Perform horizontal convolution."""
@@ -158,24 +174,31 @@ class Demosaicing:
         return convolve1d(x, y, mode="mirror", axis=0)
 
 
-    def demosaicing_CFA_Bayer_Menon2007(
-        self, CFA: ArrayLike,
-        pattern: Literal["RGGB", "BGGR", "GRBG", "GBRG", "RGXB", "BGXR", "GRBX", "GBRX"] = "RGGB",
-        refining_step: bool = True,
+    def demosaicing_mosaic_Bayer_Menon2007(
+        self, CFA, masks,
+        refining_step= True,
     ):
         
-        CFA = np.squeeze(as_float_array(CFA))
-        R_m, G_m, B_m = self.masks(CFA.shape)
+        demosaiced = {}
+
+        R_m, G_m, B_m = masks['R'], masks['G'], masks['B']
+        
+        # plt.imshow(R_m, cmap='gray'); plt.title('Red Mask'); plt.show()
+        # plt.imshow(G_m, cmap='gray'); plt.title('Green Mask'); plt.show()
+        # plt.imshow(B_m, cmap='gray'); plt.title('Blue Mask'); plt.show()
+
+        mosaic = CFA['R'] + CFA['G'] + CFA['B']
+        mosaic = np.squeeze(as_float_array(mosaic))
 
         h_0 = as_float_array([0.0, 0.5, 0.0, 0.5, 0.0])
         h_1 = as_float_array([-0.25, 0.0, 0.5, 0.0, -0.25])
 
-        R = CFA * R_m
-        G = CFA * G_m
-        B = CFA * B_m
+        R = mosaic * R_m
+        G = mosaic * G_m
+        B = mosaic * B_m
 
-        G_H = np.where(G_m == 0, self._cnv_h(CFA, h_0) + self._cnv_h(CFA, h_1), G)
-        G_V = np.where(G_m == 0, self._cnv_v(CFA, h_0) + self._cnv_v(CFA, h_1), G)
+        G_H = np.where(G_m == 0, self._cnv_h(mosaic, h_0) + self._cnv_h(mosaic, h_1), G)
+        G_V = np.where(G_m == 0, self._cnv_v(mosaic, h_0) + self._cnv_v(mosaic, h_1), G)
 
         C_H = np.where(R_m == 1, R - G_H, 0)
         C_H = np.where(B_m == 1, B - G_H, C_H)
@@ -186,7 +209,7 @@ class Demosaicing:
         D_H = np.abs(C_H - np.pad(C_H, ((0, 0), (0, 2)), mode="reflect")[:, 2:])
         D_V = np.abs(C_V - np.pad(C_V, ((0, 2), (0, 0)), mode="reflect")[2:, :])
 
-        del h_0, h_1, CFA, C_V, C_H
+        del h_0, h_1, mosaic, C_V, C_H
 
         k = as_float_array(
             [
@@ -269,10 +292,11 @@ class Demosaicing:
 
         del M, R_m, G_m, B_m
 
-        return RGB
+        demosaiced['R'], demosaiced['G'], demosaiced['B'] = tsplit(RGB)
+        return demosaiced
 
 
-    # self.demosaicing_CFA_Bayer_DDFAPD = demosaicing_CFA_Bayer_Menon2007
+    # self.demosaicing_mosaic_Bayer_DDFAPD = demosaicing_mosaic_Bayer_Menon2007
 
 
     def refining_step_Menon2007(
@@ -378,9 +402,9 @@ class Demosaicing:
         if self.demosaic_method == "bilinear":
             return self.demosaicing_bilinear(mosaic, masks)
         elif self.demosaic_method == "malvar2004":
-            return self.demosaicing_malvar2004(CFA)
+            return self.demosaicing_malvar2004(mosaic, masks)
         elif self.demosaic_method == "menon2007":
-            return self.demosaicing_CFA_Bayer_Menon2007(CFA)
+            return self.demosaicing_mosaic_Bayer_Menon2007(mosaic, masks)
         else:
             raise ValueError(f"Unsupported demosaicing method: {self.demosaic_method}")
 
