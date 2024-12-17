@@ -64,9 +64,9 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
     
     print("Applying CFA...")
     mosaic_dict, channel_masks = sfa.apply(ms)
-    mosaic_dict['R'] = true_red * channel_masks['R']
-    mosaic_dict['G'] = true_green * channel_masks['G']
-    mosaic_dict['B'] = true_blue * channel_masks['B']
+    # mosaic_dict['R'] = true_red * channel_masks['R']
+    # mosaic_dict['G'] = true_green * channel_masks['G']
+    # mosaic_dict['B'] = true_blue * channel_masks['B']
     # print(mosaic_dict['G'][120:128, 120:128])
     
     for channel in mosaic_dict.keys():
@@ -162,10 +162,11 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
     # exit()
     rgb_hat = tstack([demosaiced['R'], demosaiced['G'], demosaiced['B']])
     # print(f"rgb_hat  shape: {rgb_hat.shape}")
-    rgb_hat = rgb_hat.astype(np.uint8)
     # if green_correction_method == "interpolation_based_gradient":
         # rgb_hat = gamma_correction(rgb_hat, gamma=2.0)
-    # rgb_hat = gamma_correction(rgb_hat)
+    rgb_hat = gamma_correction(rgb_hat)
+    rgb_hat = normalize_uint8(rgb_hat)
+    print(rgb_hat.max(), rgb_hat.min(), rgb_hat.mean())
     # print(f"rgb_hat  shape: {rgb_hat.shape}")
     # print(f"rgb_hat  max: {rgb_hat.max()} | rgb_hat min: {rgb_hat.min()}")
     save_image(rgb_hat, filename=f"demosaiced_RGB", directory=save_folder, format="png")
@@ -177,7 +178,8 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
     # reconstructed_hsi = None
     
 def normalize_uint8(image):
-    return (image / 255.0).astype(np.float32)
+    #normalize image to range [0, 255]
+    return (image / image.max() * 255).astype(np.uint8)
         
 if __name__ == '__main__':
     config = Config()

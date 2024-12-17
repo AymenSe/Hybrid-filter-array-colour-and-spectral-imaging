@@ -11,12 +11,12 @@ class SFA:
         self.pattern = pattern
         self.band_mapping = {
             'V': 1, # Assuming the 1st band violet (index 0) corresponds to 400-450nm middle of the band 415nm
-            'B': 6, # list(range(1,11)), # Assuming the 3rd band blue (index 2) corresponds to 450-490nm middle of the band 467.5nm
+            'B': 4, # list(range(1,11)), # Assuming the 3rd band blue (index 2) corresponds to 450-490nm middle of the band 467.5nm
             'C': 9, # Assuming the 3rd band cyan (index 2) corresponds to 490-500nm  middle of the band 492.5nm
-            'G': 16, # list(range(11,21)), # Assuming the 3rd band (index 2) corresponds to 500-565nm middle of the band 532.5nm
-            'Y': 17, # Assuming the 3rd band (index 2) corresponds to 565-590nm middle of the band 577.5nm
-            'O': 20, # Assuming the 3rd band (index 2) corresponds to 590-625nm middle of the band 607.5nm
-            'R': 26,# list(range(21,31)), # Assuming the 3rd band (index 2) corresponds to 625-750nm  middle of the band 687.5nm
+            'G': 10, # list(range(11,21)), # Assuming the 3rd band (index 2) corresponds to 500-565nm middle of the band 532.5nm
+            'Y': 15, # Assuming the 3rd band (index 2) corresponds to 565-590nm middle of the band 577.5nm
+            'O': 18, # Assuming the 3rd band (index 2) corresponds to 590-625nm middle of the band 607.5nm
+            'R': 20,# list(range(21,31)), # Assuming the 3rd band (index 2) corresponds to 625-750nm  middle of the band 687.5nm
         } 
         
     def masks(self, shape):
