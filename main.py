@@ -90,6 +90,7 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
                 [1, 0, 1]]
             ) / 4
             mosaic_dict['G'] = convolve(mosaic_dict['G'], k_x) # convolve(green, k_x) #
+            mosaic_dict['Y'] = convolve(mosaic_dict['Y'], k_x) # convolve(yellow, k_x) #
             # mosaic_dict['G'] = (mosaic_dict['G'] / mosaic_dict['G'].max() * 255).astype(np.uint8)
             # print(mosaic_dict['G'][120:128, 120:128])
             
@@ -121,7 +122,13 @@ def process_image(scene, pattern, green_correction_method, demosaic_method, save
             
             mosaic_dict['G'] = avg_green + 0.25 * gradients_of_yellow
 
+            gradients_of_green = convolve(mosaic_dict['G'], g_x)
+            avg_yellow = convolve(mosaic_dict['Y'], k_x)
+            
+            mosaic_dict['Y'] = avg_yellow + 0.25 * gradients_of_green
+            
         save_image(mosaic_dict['G'], filename=f"mosaic_G_corrected", directory=save_folder, format="png")
+        save_image(mosaic_dict['Y'], filename=f"mosaic_Y_corrected", directory=save_folder, format="png")
         print("Green channel corrected.")    
         print("=====================================================")
         print("\n\n")
