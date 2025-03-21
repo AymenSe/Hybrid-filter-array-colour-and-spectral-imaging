@@ -45,3 +45,16 @@ def save_image(
     print(f"Image saved at: {full_path}")
     return full_path
 
+
+def gamma_correction(image, gamma=2.2, scale_factor=1.0):
+    # make sure the image is in the range [0, 1]
+    if image.max() > 1.0:
+        image = image / 255.0
+    image = np.clip(image * scale_factor, 0, 1)  # Linear scaling
+    corrected_image = image ** (1 / gamma)  # Gamma correction
+    # corrected_image = np.power(image, 1/gamma)
+    # corrected_image = (corrected_image * 255).astype(np.uint8)
+    return corrected_image
+
+
+
