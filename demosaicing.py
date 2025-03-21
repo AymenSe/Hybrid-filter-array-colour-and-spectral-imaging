@@ -403,46 +403,33 @@ class Demosaicing:
         # make sure the numbers are from 0 to 1
         d_h = np.clip(d_h, 0, 1)
         
-        # print(d_h[124:128, 124:128])
         d_v = convolve(RGB_avg, d_f_v) / convolve(RGB_avg, s_f_v)
         # make sure the numbers are from 0 to 1
         d_v = np.clip(d_v, 0, 1)
-        # print(d_v[124:128, 124:128])
         
-        # print(f"MAx d_h: {d_h.max()} | Min d_h: {d_h.min()}")
-        # exit()
+
         
-        
-        # d_h = 0.4 * convolve(R, f_h) + 0.2 * convolve(B, f_h) + 0.4 * convolve(G, f_h)
-        # d_v = 0.4 * convolve(R, f_v) + 0.2 * convolve(B, f_v) + 0.4 * convolve(G, f_v)
+
         Y_avg = convolve(Y, y_f)
         Y_avg = np.where(Y_avg > 255, 255, Y_avg) 
-        # print(f"Max Y_avg: {Y_avg.max()} | Min Y_avg: {Y_avg.min()}")
-        # exit()
-        # print(Y[124:128, 124:128])
-        
-        #multiply the CFA['Y'] by the d_h and d_v element wise
+
         # Compute new_Y_h and new_Y_v as before
         new_Y_h = convolve(Y, s_f_h)
         new_Y_v = convolve(Y, s_f_v)
 
-        # print(Y[124:128, 124:128])
-        # print(new_Y_h[124:128, 124:128])
         # Compute the denominators as before
         id_mtx = np.ones_like(d_h)
         one_minus_d_h = id_mtx - d_h
         
         one_minus_d_v = id_mtx - d_v
-        # print(one_minus_d_h[124:128, 124:128])
         # Instead of asserting no zeros, handle them:
         final_Y_h = np.where(one_minus_d_h >0.2, new_Y_h * ((id_mtx + d_h) / one_minus_d_h), -99999)
         final_Y_v = np.where(one_minus_d_v >0.2, new_Y_v * ((id_mtx + d_v) / one_minus_d_v), -99999)
         
         
-        print(final_Y_h[124:128, 124:128])
         # print(f"MAx final_Y_h: {final_Y_h.max()} | Min final_Y_h: {final_Y_h.min()}")
 
-        # Replace -99999 with corresponding Y_avg values
+        # Replace -inf with corresponding Y_avg values
         final_Y_h = np.where(final_Y_h == -99999, Y_avg, final_Y_h)
         final_Y_v = np.where(final_Y_v == -99999, Y_avg, final_Y_v)
         
